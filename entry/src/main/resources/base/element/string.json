@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "相框应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "给照片添加拍摄参数边框"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "相框"
+    }
+  ]
+}
