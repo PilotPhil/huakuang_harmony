@@ -1,8 +1,9 @@
 import { common } from '@kit.AbilityKit';
 import { FrameConfig, buildPresets, loadCustomFrames } from '../model/FrameConfig';
-import { EditTab } from '../view/EditTab';
+import { GalleryTab } from '../view/GalleryTab';
 import { DesignTab } from '../view/DesignTab';
 import { SettingsTab } from '../view/SettingsTab';
+import { PhotoEditPage, EditParam } from '../view/PhotoEditPage';
 
 @Entry
 @Component
@@ -10,6 +11,9 @@ struct Index {
   @State frame: FrameConfig = new FrameConfig();
   @State customFrames: FrameConfig[] = [];
   @State tab: number = 0;
+  @StorageLink('statusBarH') statusH: number = 0;
+  @StorageLink('navBarH') navH: number = 0;
+  pathStack: NavPathStack = new NavPathStack();
   private tmp: FrameConfig = buildPresets()[0];
 
   aboutToAppear(): void {
@@ -17,50 +21,72 @@ struct Index {
     this.customFrames = loadCustomFrames(getContext(this) as common.Context);
   }
 
-  build() {
-    Column() {
-      // 内容区
-      Column() {
-        if (this.tab === 0) {
-          EditTab({ frame: this.frame })
-        } else if (this.tab === 1) {
-          DesignTab({ frame: this.frame, customFrames: this.customFrames })
-        } else {
-          SettingsTab()
-        }
+  @Builder
+  PageMap(name: string, param: object) {
+    if (name === 'PhotoEdit') {
+      NavDestination() {
+        PhotoEditPage({ param: param as EditParam, pathStack: this.pathStack })
       }
-      .layoutWeight(1)
+      .hideTitleBar(true)
+    }
+  }
 
-      // 底部导航
-      Row() {
-        this.TabButton(0, '编辑', '🖼')
-        this.TabButton(1, '设计', '🎨')
-        this.TabButton(2, '设置', '⚙️')
+  build() {
+    Navigation(this.pathStack) {
+      Column() {
+        // 内容区（沉浸式：顶部避开状态栏）
+        Column() {
+          if (this.tab === 0) {
+            GalleryTab({ pathStack: this.pathStack, customFrames: this.customFrames })
+          } else if (this.tab === 1) {
+            DesignTab({ frame: this.frame, customFrames: this.customFrames })
+          } else {
+            SettingsTab()
+          }
+        }
+        .layoutWeight(1)
+        .width('100%')
+
+        // 底部悬浮胶囊导航（参考 3.jpg）
+        Row() {
+          this.TabButton(0, '图库', $r('sys.symbol.art_gallery'))
+          this.TabButton(1, '设计', $r('sys.symbol.paintpalette'))
+          this.TabButton(2, '设置', $r('sys.symbol.gearshape'))
+        }
+        .width('88%')
+        .height(60)
+        .borderRadius(30)
+        .backgroundColor(Color.White)
+        .shadow({ radius: 22, color: '#26000000', offsetX: 0, offsetY: 8 })
+        .justifyContent(FlexAlign.SpaceEvenly)
+        .margin({
+          top: 8,
+          bottom: Math.max(10, px2vp(this.navH) + 8)
+        })
       }
       .width('100%')
-      .height(58)
-      .backgroundColor('#FAFAFA')
-      .border({ width: { top: 0.5 }, color: '#E5E5E5' })
+      .height('100%')
+      .padding({ top: px2vp(this.statusH) })
     }
-    .width('100%')
-    .height('100%')
+    .hideTitleBar(true)
+    .mode(NavigationMode.Stack)
+    .navDestination(this.PageMap)
   }
 
   @Builder
-  TabButton(index: number, label: string, icon: string) {
-    Column({ space: 2 }) {
-      Text(icon)
-        .fontSize(18)
+  TabButton(index: number, label: string, icon: Resource) {
+    Column({ space: 3 }) {
+      SymbolGlyph(icon)
+        .fontSize(22)
+        .fontColor([this.tab === index ? '#0A59F7' : '#999999'])
       Text(label)
         .fontSize(11)
+        .fontWeight(this.tab === index ? FontWeight.Medium : FontWeight.Normal)
         .fontColor(this.tab === index ? '#0A59F7' : '#999999')
     }
     .layoutWeight(1)
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.tab === index ? '#EEF4FF' : Color.Transparent)
-    .borderRadius(10)
-    .margin(4)
     .onClick(() => {
       this.tab = index;
     })

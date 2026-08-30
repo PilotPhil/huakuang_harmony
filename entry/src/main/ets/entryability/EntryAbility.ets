@@ -19,13 +19,30 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    // Main window is created, set main page for this ability
+    // 主窗口已创建，加载主页面
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;
+      }
+      // 沉浸式：内容延伸至状态栏/手势区，状态栏透明，图标颜色跟随页面
+      try {
+        const win = windowStage.getMainWindowSync();
+        win.setWindowLayoutFullScreen(true);
+        win.setWindowSystemBarProperties({
+          statusBarColor: '#00000000',
+          statusBarContentColor: '#000000',
+          navigationBarColor: '#00000000'
+        });
+        // 记录安全区高度（px），页面内用 px2vp 转换为 vp 做顶部留白
+        const top = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        AppStorage.setOrCreate('statusBarH', top.topRect.height);
+        const bottom = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+        AppStorage.setOrCreate('navBarH', bottom.bottomRect.height);
+      } catch (e) {
+        hilog.error(DOMAIN, 'testTag', 'Failed to immerse. Cause: %{public}s', JSON.stringify(e));
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
     });

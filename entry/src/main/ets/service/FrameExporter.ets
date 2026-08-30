@@ -160,14 +160,17 @@ async function renderOne(ctx: common.Context, uri: string, frame: FrameConfig, i
 }
 
 /**
- * 批量导出：为每张照片生成加框 JPEG，并弹出系统保存对话框写入相册。
+ * 编辑页保存：frame 为 null 时原始照片直接存回相册，否则渲染相框后保存。
  * 返回用户确认保存的数量。
  */
-export async function exportFrames(ctx: common.Context, uris: string[], frame: FrameConfig): Promise<number> {
+export async function exportPhoto(ctx: common.Context, uri: string, frame: FrameConfig | null): Promise<number> {
   const files: string[] = [];
-  for (let i = 0; i < uris.length; i++) {
-    const f = await renderOne(ctx, uris[i], frame, i);
-    files.push(f);
+  if (frame === null) {
+    const path = `${ctx.cacheDir}/framed_${Date.now()}_orig.jpg`;
+    fs.copyFileSync(uri, path);
+    files.push(fileUri.getUriFromPath(path));
+  } else {
+    files.push(await renderOne(ctx, uri, frame, 0));
   }
   const helper = photoAccessHelper.getPhotoAccessHelper(ctx);
   const configs: photoAccessHelper.PhotoCreationConfig[] = [];
