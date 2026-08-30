@@ -142,7 +142,7 @@ export struct GalleryTab {
         .rowsGap(2)
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: 2, right: 2, top: 10, bottom: 10 })
+        .padding({ left: 2, right: 2, top: 10, bottom: 132 })
         .gesture(
           PinchGesture({ fingers: 2 })
             .onActionStart(() => {

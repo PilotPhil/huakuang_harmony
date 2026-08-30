@@ -33,8 +33,8 @@ struct Index {
 
   build() {
     Navigation(this.pathStack) {
-      Column() {
-        // 内容区（沉浸式：顶部避开状态栏）
+      Stack({ alignContent: Alignment.Bottom }) {
+        // 内容区（沉浸式：顶部避开状态栏，底部延伸到屏幕底，可滚动到悬浮导航下方）
         Column() {
           if (this.tab === 0) {
             GalleryTab({ pathStack: this.pathStack, customFrames: this.customFrames })
@@ -44,10 +44,11 @@ struct Index {
             SettingsTab()
           }
         }
-        .layoutWeight(1)
         .width('100%')
+        .height('100%')
+        .padding({ top: px2vp(this.statusH) })
 
-        // 底部悬浮胶囊导航（参考 3.jpg）
+        // 底部悬浮胶囊导航（悬浮于内容之上，内容从胶囊下方穿过）
         Row() {
           this.TabButton(0, '图库', $r('sys.symbol.art_gallery'))
           this.TabButton(1, '设计', $r('sys.symbol.paintpalette'))
@@ -59,14 +60,10 @@ struct Index {
         .backgroundColor(Color.White)
         .shadow({ radius: 22, color: '#26000000', offsetX: 0, offsetY: 8 })
         .justifyContent(FlexAlign.SpaceEvenly)
-        .margin({
-          top: 8,
-          bottom: Math.max(10, px2vp(this.navH) + 8)
-        })
+        .margin({ bottom: px2vp(this.navH) + 12 })
       }
       .width('100%')
       .height('100%')
-      .padding({ top: px2vp(this.statusH) })
     }
     .hideTitleBar(true)
     .mode(NavigationMode.Stack)

@@ -229,7 +229,7 @@ export struct DesignTab {
           .backgroundColor('#0A59F7')
           .onClick(() => this.saveAsPreset())
       }
-      .padding(16)
+      .padding({ left: 16, right: 16, top: 16, bottom: 132 })
     }
     .width('100%')
     .height('100%')
