@@ -60,7 +60,7 @@ struct Index {
         .backdropBlur(24)
         .shadow({ radius: 18, color: '#22000000', offsetX: 0, offsetY: 6 })
         .justifyContent(FlexAlign.SpaceEvenly)
-        .margin({ bottom: 10 })
+        .margin({ bottom: 26 })
       }
       .width('100%')
       .height('100%')

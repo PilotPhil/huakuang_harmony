@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FrameConfig, buildPresets } from '../model/FrameConfig';
-import { markProcessed } from '../model/ProcessLog';
+import { markProcessed } from '../model/AlbumStore';
 import { PhotoItem, makePhotoItem } from '../model/ExifHelper';
 import { exportPhoto } from '../service/FrameExporter';
 import { FramePreview } from './FramePreview';
@@ -11,10 +11,12 @@ import { setStatusBarStyle } from '../util/WindowUtils';
 /** 图库页跳转编辑页的参数 */
 export class EditParam {
   uri: string = '';
+  albumId: string = '';
   customFrames: FrameConfig[] = [];
 
-  constructor(uri: string, customFrames: FrameConfig[]) {
+  constructor(uri: string, albumId: string, customFrames: FrameConfig[]) {
     this.uri = uri;
+    this.albumId = albumId;
     this.customFrames = customFrames;
   }
 }
@@ -31,7 +33,7 @@ export struct PhotoEditPage {
   @State previewW: number = 360;
   @State photo: PhotoItem = new PhotoItem();
   @StorageLink('statusBarH') statusH: number = 0;
-  param: EditParam = new EditParam('', []);
+  param: EditParam = new EditParam('', '', []);
   pathStack: NavPathStack | null = null;
 
   aboutToAppear(): void {
@@ -64,7 +66,7 @@ export struct PhotoEditPage {
       const ctx = getContext(this) as common.Context;
       const n = await exportPhoto(ctx, this.photo.uri, this.selectedFrame());
       if (n > 0) {
-        markProcessed(ctx, this.photo.uri);
+        markProcessed(ctx, this.param.albumId, this.photo.uri);
       }
       promptAction.showToast({ message: n > 0 ? '已保存到相册' : '已取消保存' });
     } catch (err) {
