@@ -287,7 +287,7 @@ export struct GalleryTab {
                 this.AlbumSection(album)
               }, (album: Album) => album.id)
             }
-            .padding({ left: 18, right: 18, bottom: 104 })
+            .padding({ left: 18, right: 18, bottom: 120 })
           }
           .layoutWeight(1)
           .width('100%')
