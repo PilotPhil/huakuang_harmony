@@ -47,18 +47,18 @@ struct Index {
         .height('100%')
         .padding({ top: px2vp(this.statusH) })
 
-        // 底部悬浮胶囊导航：内容区穿透至手势区，胶囊吸附底部（沉浸光感：磨砂玻璃材质）
+        // 底部悬浮胶囊导航（参考 pic/6：白色胶囊 ~60% 宽、选中蓝色、未选中黑色）
         Row() {
           this.TabButton(0, '图库', $r('sys.symbol.art_gallery'))
           this.TabButton(1, '设计', $r('sys.symbol.paintpalette'))
           this.TabButton(2, '设置', $r('sys.symbol.gearshape'))
         }
-        .width('88%')
-        .height(64)
-        .borderRadius(32)
-        .backgroundColor('#B8FFFFFF')
+        .width('62%')
+        .height(66)
+        .borderRadius(33)
+        .backgroundColor('#E6FFFFFF')
         .backdropBlur(24)
-        .shadow({ radius: 14, color: '#1A000000', offsetX: 0, offsetY: 4 })
+        .shadow({ radius: 18, color: '#22000000', offsetX: 0, offsetY: 6 })
         .justifyContent(FlexAlign.SpaceEvenly)
         .margin({ bottom: 10 })
       }
@@ -72,14 +72,14 @@ struct Index {
 
   @Builder
   TabButton(index: number, label: string, icon: Resource) {
-    Column({ space: 4 }) {
+    Column({ space: 5 }) {
       SymbolGlyph(icon)
-        .fontSize(22)
-        .fontColor([this.tab === index ? '#0A59F7' : '#999999'])
+        .fontSize(25)
+        .fontColor([this.tab === index ? '#0A59F7' : '#262626'])
       Text(label)
-        .fontSize(11)
-        .fontWeight(this.tab === index ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.tab === index ? '#0A59F7' : '#999999')
+        .fontSize(12)
+        .fontWeight(this.tab === index ? FontWeight.Bold : FontWeight.Normal)
+        .fontColor(this.tab === index ? '#0A59F7' : '#262626')
     }
     .layoutWeight(1)
     .height('100%')
