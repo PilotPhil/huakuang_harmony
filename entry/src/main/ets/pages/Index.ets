@@ -73,21 +73,13 @@ struct Index {
   @Builder
   TabButton(index: number, label: string, icon: Resource) {
     Column({ space: 4 }) {
-      Column() {
-        SymbolGlyph(icon)
-          .fontSize(22)
-          .fontColor([this.tab === index ? '#222222' : '#999999'])
-      }
-      .width(46)
-      .height(46)
-      .borderRadius(23)
-      .backgroundColor(this.tab === index ? Color.White : Color.Transparent)
-      .justifyContent(FlexAlign.Center)
-      .shadow(this.tab === index ? { radius: 10, color: '#2E000000', offsetX: 0, offsetY: 2 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
+      SymbolGlyph(icon)
+        .fontSize(22)
+        .fontColor([this.tab === index ? '#0A59F7' : '#999999'])
       Text(label)
         .fontSize(11)
         .fontWeight(this.tab === index ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.tab === index ? '#222222' : '#999999')
+        .fontColor(this.tab === index ? '#0A59F7' : '#999999')
     }
     .layoutWeight(1)
     .height('100%')
