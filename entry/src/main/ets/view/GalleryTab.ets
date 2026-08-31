@@ -168,9 +168,15 @@ export struct GalleryTab {
           .fontWeight(FontWeight.Medium)
           .fontColor('#333333')
         Blank()
-        Text(`${album.photos.length}张`)
-          .fontSize(14)
-          .fontColor('#888888')
+        Row({ space: 8 }) {
+          SymbolGlyph($r('sys.symbol.plus'))
+            .fontSize(14)
+            .fontColor(['#888888'])
+            .onClick(() => this.importPhotos(album.id))
+          Text(`${album.photos.length}张`)
+            .fontSize(14)
+            .fontColor('#888888')
+        }
       }
       .width('100%')
       .padding({ top: 22, bottom: 12 })
