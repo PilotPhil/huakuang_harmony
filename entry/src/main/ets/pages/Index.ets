@@ -49,7 +49,7 @@ struct Index {
 
         // 底部悬浮胶囊导航（参考 pic/6：白色胶囊 ~60% 宽、选中蓝色、未选中黑色）
         Row() {
-          this.TabButton(0, '图库', $r('sys.symbol.art_gallery'))
+          this.TabButton(0, '相册', $r('sys.symbol.art_gallery'))
           this.TabButton(1, '设计', $r('sys.symbol.paintpalette'))
           this.TabButton(2, '设置', $r('sys.symbol.gearshape'))
         }

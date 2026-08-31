@@ -257,7 +257,7 @@ export struct GalleryTab {
       Column() {
         // 顶栏：标题 + 新建相册按钮
         Row() {
-          Text('图库')
+          Text('相册')
             .fontSize(30)
             .fontWeight(FontWeight.Bold)
             .fontColor('#111111')
