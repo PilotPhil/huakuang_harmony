@@ -2,18 +2,19 @@ import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FrameConfig, buildPresets } from '../model/FrameConfig';
-import { PhotoItem } from '../model/ExifHelper';
+import { markProcessed } from '../model/ProcessLog';
+import { PhotoItem, makePhotoItem } from '../model/ExifHelper';
 import { exportPhoto } from '../service/FrameExporter';
 import { FramePreview } from './FramePreview';
 import { setStatusBarStyle } from '../util/WindowUtils';
 
 /** 图库页跳转编辑页的参数 */
 export class EditParam {
-  photo: PhotoItem = new PhotoItem();
+  uri: string = '';
   customFrames: FrameConfig[] = [];
 
-  constructor(photo: PhotoItem, customFrames: FrameConfig[]) {
-    this.photo = photo;
+  constructor(uri: string, customFrames: FrameConfig[]) {
+    this.uri = uri;
     this.customFrames = customFrames;
   }
 }
@@ -28,13 +29,17 @@ export struct PhotoEditPage {
   @State allFrames: FrameConfig[] = [];
   @State busy: boolean = false;
   @State previewW: number = 360;
+  @State photo: PhotoItem = new PhotoItem();
   @StorageLink('statusBarH') statusH: number = 0;
-  param: EditParam = new EditParam(new PhotoItem(), []);
+  param: EditParam = new EditParam('', []);
   pathStack: NavPathStack | null = null;
 
   aboutToAppear(): void {
     this.allFrames = buildPresets().concat(this.param.customFrames);
     setStatusBarStyle(getContext(this) as common.Context, true); // 深色页面：状态栏白色图标
+    makePhotoItem(this.param.uri).then((item: PhotoItem) => {
+      this.photo = item;
+    });
   }
 
   aboutToDisappear(): void {
@@ -57,7 +62,10 @@ export struct PhotoEditPage {
     this.busy = true;
     try {
       const ctx = getContext(this) as common.Context;
-      const n = await exportPhoto(ctx, this.param.photo.uri, this.selectedFrame());
+      const n = await exportPhoto(ctx, this.photo.uri, this.selectedFrame());
+      if (n > 0) {
+        markProcessed(ctx, this.photo.uri);
+      }
       promptAction.showToast({ message: n > 0 ? '已保存到相册' : '已取消保存' });
     } catch (err) {
       const e = err as BusinessError;
@@ -86,7 +94,7 @@ export struct PhotoEditPage {
             this.pathStack.pop(true);
           }
         })
-        Text(this.param.photo.uri.split('/').pop()?.substring(0, 18) ?? '')
+        Text(this.photo.uri.split('/').pop()?.substring(0, 18) ?? '')
           .fontSize(14)
           .fontColor('#BBBBBB')
           .margin({ left: 12 })
@@ -106,7 +114,7 @@ export struct PhotoEditPage {
       // 大图预览
       Stack() {
         if (this.selectedFrame() === null) {
-          Image(this.param.photo.uri)
+          Image(this.photo.uri)
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain)
@@ -115,7 +123,7 @@ export struct PhotoEditPage {
             Column() {
               FramePreview({
                 frame: this.selectedFrame()!,
-                photo: this.param.photo,
+                photo: this.photo,
                 previewWidth: this.previewW,
                 radius: 2
               })
@@ -186,7 +194,7 @@ export struct PhotoEditPage {
     Column({ space: 6 }) {
       FramePreview({
         frame: f,
-        photo: this.param.photo,
+        photo: this.photo,
         previewWidth: 96,
         radius: 2
       })
