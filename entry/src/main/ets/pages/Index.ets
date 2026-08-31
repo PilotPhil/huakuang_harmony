@@ -4,6 +4,7 @@ import { GalleryTab } from '../view/GalleryTab';
 import { DesignTab } from '../view/DesignTab';
 import { SettingsTab } from '../view/SettingsTab';
 import { PhotoEditPage, EditParam } from '../view/PhotoEditPage';
+import { AlbumDetailPage, AlbumDetailParam } from '../view/AlbumDetailPage';
 
 @Entry
 @Component
@@ -27,6 +28,11 @@ struct Index {
         PhotoEditPage({ param: param as EditParam, pathStack: this.pathStack })
       }
       .hideTitleBar(true)
+    } else if (name === 'AlbumDetail') {
+      NavDestination() {
+        AlbumDetailPage({ param: param as AlbumDetailParam, pathStack: this.pathStack })
+      }
+      .hideTitleBar(true)
     }
   }
 
@@ -45,7 +51,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .padding({ top: px2vp(this.statusH) })
+        .padding({ top: this.tab === 0 ? 0 : px2vp(this.statusH) })
 
         // 底部悬浮胶囊导航（参考 pic/6：白色胶囊 ~60% 宽、选中蓝色、未选中黑色）
         Row() {

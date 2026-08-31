@@ -4,22 +4,21 @@ import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FrameConfig } from '../model/FrameConfig';
 import { Album, PhotoRec, loadAlbums, createAlbum, addPhotosToAlbum, removePhoto, removeAlbum } from '../model/AlbumStore';
-import { EditParam } from './PhotoEditPage';
+import { AlbumDetailParam } from './AlbumDetailPage';
 
 /**
- * 图库页：右上角 + 新建相册（沉浸光感弹窗）→ 选择导入图片 → 相册分组多行多列展示。
- * 双指捏合调整列数（1~5），点击照片进入相框编辑页，长按移除。
+ * 图库页：右上角 + 新建相册（沉浸光感弹窗）→ 选择导入图片 → 相册卡片堆叠展示。
+ * 点击堆叠中的照片或编辑按钮进入相册详情页，长按照片移除。
  */
 @Component
 export struct GalleryTab {
   pathStack: NavPathStack | null = null;
   @Link customFrames: FrameConfig[];
   @State albums: Album[] = [];
-  @State cols: number = 3;
-  @State startCols: number = 3;
   @State pageW: number = 360;
   @State showCreate: boolean = false;
   @State albumName: string = '';
+  @StorageLink('statusBarH') statusH: number = 0;
   @StorageLink('albumVersion') @Watch('onAlbumsChanged') albumVersion: number = 0;
 
   aboutToAppear(): void {
@@ -34,26 +33,31 @@ export struct GalleryTab {
     this.albums = loadAlbums(getContext(this) as common.Context);
   }
 
-  private gap(): number {
-    return 10;
+  private pilePhotoWidth(): number {
+    return Math.min(260, Math.max(200, this.pageW * 0.68));
   }
 
-  private cellW(): number {
-    const pad = 18;
-    return (this.pageW - pad * 2 - (this.cols - 1) * this.gap()) / this.cols;
+  private pilePhotoHeight(): number {
+    return this.pilePhotoWidth() * 2 / 3;
   }
 
-  private groupH(n: number): number {
-    const rows = Math.ceil(n / this.cols);
-    return rows * this.cellW() + (rows - 1) * this.gap();
-  }
-
-  private tmpl(): string {
-    let s = '';
-    for (let i = 0; i < this.cols; i++) {
-      s += '1fr ';
+  private pileSpread(total: number): number {
+    if (total <= 1) {
+      return 0;
     }
-    return s.trim();
+    const available = Math.max(0, this.pageW - 76 - this.pilePhotoWidth());
+    return Math.min(24, available / (total - 1));
+  }
+
+  private pileOffset(index: number, total: number): number {
+    return (index - (total - 1) / 2) * this.pileSpread(total);
+  }
+
+  private pileAngle(index: number, total: number): number {
+    if (index === total - 1) {
+      return 0;
+    }
+    return index % 2 === 0 ? -2.5 : 2.5;
   }
 
   /** 新建相册：确定后弹出图片选择并导入 */
@@ -88,9 +92,13 @@ export struct GalleryTab {
     }
   }
 
-  openPhoto(album: Album, rec: PhotoRec) {
+  openAlbum(album: Album) {
     if (this.pathStack !== null) {
-      this.pathStack.pushPathByName('PhotoEdit', new EditParam(rec.uri, album.id, this.customFrames), true);
+      this.pathStack.pushPathByName(
+        'AlbumDetail',
+        new AlbumDetailParam(album.id, this.customFrames),
+        true
+      );
     }
   }
 
@@ -133,73 +141,147 @@ export struct GalleryTab {
   }
 
   @Builder
-  Card(album: Album, rec: PhotoRec) {
-    GridItem() {
-      Stack({ alignContent: Alignment.TopEnd }) {
-        Image(rec.uri)
-          .width(this.cellW())
-          .height(this.cellW())
-          .borderRadius(14)
-          .objectFit(ImageFit.Cover)
-        if (!rec.processed) {
-          Text('未处理')
-            .fontSize(10)
-            .fontColor(Color.White)
-            .backgroundColor('#80000000')
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .borderRadius(8)
-            .margin(6)
-        }
+  PilePhoto(album: Album, rec: PhotoRec, index: number, total: number) {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Image(rec.uri)
+        .width('100%')
+        .height('100%')
+        .borderRadius(14)
+        .objectFit(ImageFit.Cover)
+      if (!rec.processed) {
+        Text('未处理')
+          .fontSize(10)
+          .fontColor(Color.White)
+          .backgroundColor('#80000000')
+          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+          .borderRadius(8)
+          .margin(7)
       }
-      .onClick(() => this.openPhoto(album, rec))
-      .gesture(
-        LongPressGesture()
-          .onAction(() => this.confirmRemove(album, rec))
-      )
     }
+    .width(this.pilePhotoWidth())
+    .height(this.pilePhotoHeight())
+    .borderRadius(14)
+    .border({ width: 3, color: Color.White })
+    .shadow({ radius: 10, color: '#33000000', offsetX: 0, offsetY: 5 })
+    .rotate({ angle: this.pileAngle(index, total) })
+    .translate({ x: this.pileOffset(index, total) })
+    .zIndex(index)
+    .onClick(() => this.openAlbum(album))
+    .gesture(
+      LongPressGesture()
+        .onAction(() => this.confirmRemove(album, rec))
+    )
+  }
+
+  @Builder
+  PhotoPile(album: Album) {
+    Stack({ alignContent: Alignment.Center }) {
+      ForEach(album.photos, (rec: PhotoRec, index: number) => {
+        this.PilePhoto(album, rec, index, album.photos.length)
+      }, (rec: PhotoRec) => rec.uri)
+    }
+    .width('100%')
+    .height(this.pilePhotoHeight() + 24)
+    .clip(false)
+  }
+
+  @Builder
+  EmptyAlbum(album: Album) {
+    Column({ space: 10 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Column() {
+        }
+        .width(156)
+        .height(104)
+        .borderRadius(14)
+        .backgroundColor('#F1F1F1')
+        .rotate({ angle: -4 })
+
+        Column() {
+          SymbolGlyph($r('sys.symbol.plus'))
+            .fontSize(28)
+            .fontColor(['#0A59F7'])
+        }
+        .width(156)
+        .height(104)
+        .borderRadius(14)
+        .backgroundColor('#F7F7F7')
+        .border({ width: 2, color: '#D7D7D7', style: BorderStyle.Dashed })
+        .justifyContent(FlexAlign.Center)
+      }
+      Text('点击添加照片 · 长按删除相册')
+        .fontSize(12)
+        .fontColor('#AAAAAA')
+    }
+    .width('100%')
+    .height(164)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => this.importPhotos(album.id))
+  }
+
+  @Builder
+  AlbumHeader(album: Album) {
+    Row() {
+      Column({ space: 2 }) {
+        Text(album.name)
+          .fontSize(18)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#222222')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${album.photos.length} 张照片`)
+          .fontSize(12)
+          .fontColor('#888888')
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Row({ space: 8 }) {
+        this.AlbumAction($r('sys.symbol.plus'), '#555555', '#F0F0F0', (): void => {
+          this.importPhotos(album.id);
+        })
+        this.AlbumAction($r('sys.symbol.square_and_pencil'), '#0A59F7', '#EAF1FF', (): void => {
+          this.openAlbum(album);
+        })
+        this.AlbumAction($r('sys.symbol.trash'), '#D94838', '#FFF0EE', (): void => {
+          this.confirmRemoveAlbum(album);
+        })
+      }
+    }
+    .width('100%')
+  }
+
+  @Builder
+  AlbumAction(icon: Resource, color: string, bg: string, action: () => void) {
+    Stack({ alignContent: Alignment.Center }) {
+      SymbolGlyph(icon)
+        .fontSize(17)
+        .fontColor([color])
+    }
+    .width(34)
+    .height(34)
+    .borderRadius(17)
+    .backgroundColor(bg)
+    .onClick(action)
   }
 
   @Builder
   AlbumSection(album: Album) {
     Column() {
-      Row() {
-        Text(album.name)
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#333333')
-        Blank()
-        Row({ space: 8 }) {
-          SymbolGlyph($r('sys.symbol.plus'))
-            .fontSize(14)
-            .fontColor(['#888888'])
-            .onClick(() => this.importPhotos(album.id))
-          Text(`${album.photos.length}张`)
-            .fontSize(14)
-            .fontColor('#888888')
-        }
-      }
-      .width('100%')
-      .padding({ top: 22, bottom: 12 })
+      this.AlbumHeader(album)
 
       if (album.photos.length > 0) {
-        Grid() {
-          ForEach(album.photos, (rec: PhotoRec) => {
-            this.Card(album, rec)
-          }, (rec: PhotoRec) => rec.uri)
-        }
-        .columnsTemplate(this.tmpl())
-        .columnsGap(this.gap())
-        .rowsGap(this.gap())
-        .height(this.groupH(album.photos.length))
-        .width('100%')
+        this.PhotoPile(album)
       } else {
-        Text('（空相册，长按可删除）')
-          .fontSize(12)
-          .fontColor('#BBBBBB')
-          .width('100%')
+        this.EmptyAlbum(album)
       }
     }
     .width('100%')
+    .padding(16)
+    .borderRadius(22)
+    .backgroundColor(Color.White)
+    .border({ width: 2, color: '#D8D8D8' })
+    .shadow({ radius: 12, color: '#16000000', offsetX: 0, offsetY: 5 })
     .gesture(
       LongPressGesture()
         .onAction(() => {
@@ -270,40 +352,35 @@ export struct GalleryTab {
           .width(46)
           .height(46)
           .borderRadius(23)
-          .backgroundColor(Color.White)
+          .backgroundColor('#80FFFFFF')
+          .backdropBlur(20)
+          .border({ width: 1, color: '#CCFFFFFF' })
           .justifyContent(FlexAlign.Center)
-          .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 10, color: '#10000000', offsetX: 0, offsetY: 3 })
           .onClick(() => {
             this.showCreate = true;
           })
         }
         .width('100%')
-        .padding({ left: 18, right: 18, top: 10 })
+        .padding({ left: 18, right: 18, top: px2vp(this.statusH) + 12, bottom: 14 })
+        .backgroundColor('#66FFFFFF')
+        .backdropBlur(32)
 
         if (this.albums.length > 0) {
           Scroll() {
-            Column() {
+            Column({ space: 18 }) {
               ForEach(this.albums, (album: Album) => {
                 this.AlbumSection(album)
               }, (album: Album) => album.id)
             }
-            .padding({ left: 18, right: 18, bottom: 120 })
+            .width('100%')
+            .padding({ left: 18, right: 18, top: 18, bottom: 120 })
           }
           .layoutWeight(1)
           .width('100%')
+          .align(Alignment.Top)
           .scrollBar(BarState.Off)
-          .gesture(
-            PinchGesture({ fingers: 2 })
-              .onActionStart(() => {
-                this.startCols = this.cols;
-              })
-              .onActionUpdate((e: GestureEvent) => {
-                const c = Math.max(1, Math.min(5, Math.round(this.startCols / e.scale)));
-                if (c !== this.cols) {
-                  this.cols = c;
-                }
-              })
-          )
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         } else {
           Column({ space: 14 }) {
             Column() {
@@ -344,6 +421,6 @@ export struct GalleryTab {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F2F2F2')
+    .backgroundColor('#F2F5F7')
   }
 }
