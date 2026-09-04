@@ -5,6 +5,7 @@ import { DesignTab } from '../view/DesignTab';
 import { SettingsTab } from '../view/SettingsTab';
 import { PhotoEditPage, EditParam } from '../view/PhotoEditPage';
 import { AlbumDetailPage, AlbumDetailParam } from '../view/AlbumDetailPage';
+import { FrameDesignPage, FrameDesignParam } from '../view/FrameDesignPage';
 
 @Entry
 @Component
@@ -33,6 +34,15 @@ struct Index {
         AlbumDetailPage({ param: param as AlbumDetailParam, pathStack: this.pathStack })
       }
       .hideTitleBar(true)
+    } else if (name === 'FrameDesign') {
+      NavDestination() {
+        FrameDesignPage({
+          param: param as FrameDesignParam,
+          customFrames: this.customFrames,
+          pathStack: this.pathStack
+        })
+      }
+      .hideTitleBar(true)
     }
   }
 
@@ -44,7 +54,11 @@ struct Index {
           if (this.tab === 0) {
             GalleryTab({ pathStack: this.pathStack, customFrames: this.customFrames })
           } else if (this.tab === 1) {
-            DesignTab({ frame: this.frame, customFrames: this.customFrames })
+            DesignTab({
+              frame: this.frame,
+              customFrames: this.customFrames,
+              pathStack: this.pathStack
+            })
           } else {
             SettingsTab()
           }
@@ -62,7 +76,7 @@ struct Index {
         .width('62%')
         .height(66)
         .borderRadius(33)
-        .backgroundColor('#E6FFFFFF')
+        .backgroundColor($r('app.color.nav_glass'))
         .backdropBlur(24)
         .shadow({ radius: 18, color: '#22000000', offsetX: 0, offsetY: 6 })
         .justifyContent(FlexAlign.SpaceEvenly)
@@ -81,11 +95,11 @@ struct Index {
     Column({ space: 5 }) {
       SymbolGlyph(icon)
         .fontSize(25)
-        .fontColor([this.tab === index ? '#0A59F7' : '#262626'])
+        .fontColor([this.tab === index ? '#0A59F7' : $r('app.color.text_primary')])
       Text(label)
         .fontSize(12)
         .fontWeight(this.tab === index ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.tab === index ? '#0A59F7' : '#262626')
+        .fontColor(this.tab === index ? '#0A59F7' : $r('app.color.text_primary'))
     }
     .layoutWeight(1)
     .height('100%')

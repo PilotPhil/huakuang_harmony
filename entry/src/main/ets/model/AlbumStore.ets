@@ -9,6 +9,7 @@ export class PhotoRec {
   uri: string = '';
   ts: number = 0;          // 导入时间戳
   processed: boolean = false; // 是否已加框处理过
+  frameId: string = '';    // 暂存用于批量导出的相框
 }
 
 /** 一个相册 */
@@ -39,6 +40,7 @@ export function loadAlbums(ctx: common.Context): Album[] {
         rec.uri = p.uri;
         rec.ts = p.ts;
         rec.processed = p.processed;
+        rec.frameId = p.frameId || '';
         album.photos.push(rec);
       }
       out.push(album);
@@ -98,8 +100,21 @@ export function addPhotosToAlbum(ctx: common.Context, albumId: string, uris: str
   bumpVersion();
 }
 
-/** 标记某张已处理 */
-export function markProcessed(ctx: common.Context, albumId: string, uri: string): void {
+/** 暂存某张照片批量导出时使用的相框 */
+export function setPhotoFrame(ctx: common.Context, albumId: string, uri: string, frameId: string): void {
+  const albums = loadAlbums(ctx);
+  const album = albums.find((a: Album) => a.id === albumId);
+  const photo = album?.photos.find((p: PhotoRec) => p.uri === uri);
+  if (photo === undefined || photo.frameId === frameId) {
+    return;
+  }
+  photo.frameId = frameId;
+  persist(ctx, albums);
+  bumpVersion();
+}
+
+/** 批量标记照片已导出 */
+export function markPhotosProcessed(ctx: common.Context, albumId: string, uris: string[]): void {
   const albums = loadAlbums(ctx);
   let changed = false;
   for (const a of albums) {
@@ -107,7 +122,7 @@ export function markProcessed(ctx: common.Context, albumId: string, uri: string)
       continue;
     }
     for (const p of a.photos) {
-      if (p.uri === uri && !p.processed) {
+      if (uris.indexOf(p.uri) >= 0 && !p.processed) {
         p.processed = true;
         changed = true;
       }
@@ -117,6 +132,11 @@ export function markProcessed(ctx: common.Context, albumId: string, uri: string)
     persist(ctx, albums);
     bumpVersion();
   }
+}
+
+/** 标记某张已处理 */
+export function markProcessed(ctx: common.Context, albumId: string, uri: string): void {
+  markPhotosProcessed(ctx, albumId, [uri]);
 }
 
 /** 从相册移除一张 */

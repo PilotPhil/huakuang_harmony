@@ -49,7 +49,7 @@ export struct SettingsTab {
     Text(text)
       .fontSize(15)
       .fontWeight(FontWeight.Medium)
-      .fontColor('#333333')
+      .fontColor($r('app.color.text_primary'))
       .width('100%')
   }
 
@@ -58,15 +58,15 @@ export struct SettingsTab {
     Row() {
       Text(label)
         .fontSize(15)
-        .fontColor('#333333')
+        .fontColor($r('app.color.text_primary'))
       Blank()
       Text(value)
         .fontSize(14)
-        .fontColor(this.loggedIn ? '#0A59F7' : '#999999')
+        .fontColor(this.loggedIn ? '#0A59F7' : $r('app.color.text_tertiary'))
       if (action !== undefined) {
         Text('›')
           .fontSize(18)
-          .fontColor('#CCCCCC')
+          .fontColor($r('app.color.text_disabled'))
           .margin({ left: 6 })
       }
     }
@@ -99,9 +99,10 @@ export struct SettingsTab {
             Text(this.loggedIn ? this.account : '未登录')
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
             Text(this.loggedIn ? '已登录（演示账号）' : '登录后可在多设备同步你的相框设计')
               .fontSize(12)
-              .fontColor('#999999')
+              .fontColor($r('app.color.text_tertiary'))
           }
           .alignItems(HorizontalAlign.Start)
 
@@ -110,7 +111,7 @@ export struct SettingsTab {
           Button(this.loggedIn ? '退出' : '登录', { type: ButtonType.Capsule })
             .fontSize(13)
             .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.loggedIn ? '#EEEEEE' : '#0A59F7')
+            .backgroundColor(this.loggedIn ? $r('app.color.surface_tertiary') : '#0A59F7')
             .fontColor(this.loggedIn ? '#D94838' : Color.White)
             .onClick(() => {
               if (this.loggedIn) {
@@ -122,7 +123,7 @@ export struct SettingsTab {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor('#F7F7F7')
+        .backgroundColor($r('app.color.surface_secondary'))
         .borderRadius(12)
 
         // 购买相关
@@ -141,7 +142,7 @@ export struct SettingsTab {
         this.RowItem('隐私政策', '')
         Text('相框 · FrameStudio 是一个给照片添加拍摄参数边框的小工具。\n当前为演示版本。')
           .fontSize(12)
-          .fontColor('#BBBBBB')
+          .fontColor($r('app.color.text_disabled'))
           .width('100%')
       }
       .padding({ left: 16, right: 16, top: 16, bottom: 132 })
@@ -149,5 +150,6 @@ export struct SettingsTab {
     .width('100%')
     .height('100%')
     .align(Alignment.Top)
+    .backgroundColor($r('app.color.page_background'))
   }
 }

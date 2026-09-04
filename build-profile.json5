@@ -1,26 +1,10 @@
 {
   "app": {
-    "signingConfigs": [
-      {
-        "name": "default",
-        "type": "HarmonyOS",
-        "material": {
-          "certpath": "/Users/pilot/.ohos/config/default_huakuang_harmony_z4yZeH0cXXuyRJ5JbRWKNwecWkN7DrU6B6Aypt4ypsQ=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001993BCDA4A96C07DDDF86B5484C644655929FFB638A8560829DF96E4BB219C83222322902D24",
-          "profile": "/Users/pilot/.ohos/config/default_huakuang_harmony_z4yZeH0cXXuyRJ5JbRWKNwecWkN7DrU6B6Aypt4ypsQ=.p7b",
-          "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/pilot/.ohos/config/default_huakuang_harmony_z4yZeH0cXXuyRJ5JbRWKNwecWkN7DrU6B6Aypt4ypsQ=.p12",
-          "storePassword": "0000001912ED613C33DDFB8FF3B40A40E27463523D0336C7CF2039AF3C8C8731CF110D098EC8566B5D"
-        }
-      }
-    ],
     "products": [
       {
         "name": "default",
-        "signingConfig": "default",
-        "targetSdkVersion": "6.1.1(24)",
-        "compatibleSdkVersion": "6.1.1(24)",
+        "targetSdkVersion": "6.0.1(21)",
+        "compatibleSdkVersion": "6.0.1(21)",
         "runtimeOS": "HarmonyOS",
         "buildOption": {
           "strictMode": {

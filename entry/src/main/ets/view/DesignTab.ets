@@ -1,27 +1,31 @@
-import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
-import { FrameConfig, buildPresets, BG_COLORS, TEXT_COLORS, saveCustomFrames } from '../model/FrameConfig';
+import { FrameConfig, buildPresets, saveCustomFrames } from '../model/FrameConfig';
 import { FramePreview } from './FramePreview';
+import { FrameDesignParam } from './FrameDesignPage';
 
+/** 相框管理页：分开展示内置模板与用户设计。 */
 @Component
 export struct DesignTab {
   @ObjectLink frame: FrameConfig;
   @Link customFrames: FrameConfig[];
+  @State section: number = 0;
+  @State pageW: number = 360;
+  pathStack: NavPathStack | null = null;
   presets: FrameConfig[] = buildPresets();
 
-  saveAsPreset() {
-    const c = new FrameConfig();
-    c.copyFrom(this.frame);
-    c.id = `custom_${Date.now()}`;
-    c.name = `我的相框 ${this.customFrames.length + 1}`;
-    this.customFrames.push(c);
-    saveCustomFrames(getContext(this) as common.Context, this.customFrames);
-    promptAction.showToast({ message: `已保存「${c.name}」` });
+  private cardW(): number {
+    return (this.pageW - 44) / 2;
   }
 
-  confirmDelete(f: FrameConfig) {
+  private openDesigner(frameId: string = ''): void {
+    if (this.pathStack !== null) {
+      this.pathStack.pushPathByName('FrameDesign', new FrameDesignParam(frameId), true);
+    }
+  }
+
+  private confirmDelete(f: FrameConfig): void {
     AlertDialog.show({
-      title: '删除设计',
+      title: '删除相框',
       message: `确定删除「${f.name}」吗？`,
       primaryButton: {
         value: '取消',
@@ -32,235 +36,209 @@ export struct DesignTab {
         value: '删除',
         fontColor: '#D94838',
         action: () => {
-          const idx = this.customFrames.indexOf(f);
-          if (idx >= 0) {
-            this.customFrames.splice(idx, 1);
+          const index = this.customFrames.indexOf(f);
+          if (index >= 0) {
+            this.customFrames.splice(index, 1);
             saveCustomFrames(getContext(this) as common.Context, this.customFrames);
-            if (this.frame.id === f.id) {
-              this.frame.copyFrom(this.presets[0]);
-            }
           }
         }
       }
     });
   }
 
-  @Builder
-  Swatches(colors: string[], current: string, onPick: (c: string) => void) {
-    Row({ space: 10 }) {
-      ForEach(colors, (c: string) => {
-        Column() {
-        }
-        .width(34)
-        .height(34)
-        .borderRadius(17)
-        .backgroundColor(c)
-        .border({
-          width: current === c ? 3 : 1,
-          color: current === c ? '#0A59F7' : '#DDDDDD'
-        })
-        .onClick(() => onPick(c))
-      }, (c: string) => c)
-    }
-  }
-
-  @Builder
-  SectionTitle(text: string) {
-    Text(text)
-      .fontSize(15)
-      .fontWeight(FontWeight.Medium)
-      .fontColor('#333333')
-      .width('100%')
-  }
-
-  @Builder
-  SwitchRow(label: string, isOn: boolean, onChange: (v: boolean) => void) {
-    Row() {
-      Text(label)
-        .fontSize(14)
-        .fontColor('#333333')
-      Blank()
-      Toggle({ type: ToggleType.Switch, isOn: isOn })
-        .selectedColor('#0A59F7')
-        .onChange((v: boolean) => onChange(v))
-    }
-    .width('100%')
-  }
-
   build() {
-    Scroll() {
-      Column({ space: 14 }) {
-        // 实时预览
-        Row() {
-          FramePreview({ frame: this.frame, photo: null, previewWidth: 240, radius: 6 })
+    Column() {
+      Row() {
+        Column({ space: 3 }) {
+          Text('相框设计')
+            .fontSize(28)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.text_strong'))
+          Text('管理模板，创建自己的照片边框')
+            .fontSize(12)
+            .fontColor($r('app.color.text_secondary'))
         }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        if (this.section === 1) {
+          Button('新增设计', { type: ButtonType.Capsule })
+            .height(40)
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .backgroundColor('#0A59F7')
+            .onClick(() => this.openDesigner())
+        }
+      }
+      .width('100%')
+      .padding({ left: 18, right: 18, top: 14, bottom: 14 })
+
+      Row() {
+        this.SectionTab(0, '内置模板', this.presets.length)
+        this.SectionTab(1, '我的相框', this.customFrames.length)
+      }
+      .width('100%')
+      .height(52)
+      .padding({ left: 18, right: 18 })
+      .backgroundColor($r('app.color.surface_secondary'))
+
+      if (this.section === 1 && this.customFrames.length === 0) {
+        Column({ space: 14 }) {
+          Stack({ alignContent: Alignment.Center }) {
+            SymbolGlyph($r('sys.symbol.square_and_pencil'))
+              .fontSize(34)
+              .fontColor(['#0A59F7'])
+          }
+          .width(66)
+          .height(66)
+          .borderRadius(33)
+          .backgroundColor($r('app.color.blue_tint'))
+          Text('还没有自定义相框')
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_primary'))
+          Text('从颜色、边距、排版和照片信息开始设计')
+            .fontSize(13)
+            .fontColor($r('app.color.text_tertiary'))
+          Button('新增设计', { type: ButtonType.Capsule })
+            .margin({ top: 4 })
+            .backgroundColor('#0A59F7')
+            .onClick(() => this.openDesigner())
+        }
+        .layoutWeight(1)
         .width('100%')
         .justifyContent(FlexAlign.Center)
-
-        // 预设
-        this.SectionTitle('预设相框')
-        Scroll() {
-          Column({ space: 8 }) {
-            Row({ space: 10 }) {
-              ForEach(this.presets, (f: FrameConfig) => {
-                this.Chip(f, false)
-              }, (f: FrameConfig) => f.id)
-            }
-            if (this.customFrames.length > 0) {
-              Row({ space: 10 }) {
-                ForEach(this.customFrames, (f: FrameConfig) => {
-                  this.Chip(f, true)
-                }, (f: FrameConfig) => f.id)
-              }
-            }
+        .padding({ bottom: 100 })
+      } else {
+        Grid() {
+          if (this.section === 0) {
+            ForEach(this.presets, (f: FrameConfig) => {
+              this.FrameCard(f, false)
+            }, (f: FrameConfig) => f.id)
+          } else {
+            ForEach(this.customFrames, (f: FrameConfig) => {
+              this.FrameCard(f, true)
+            }, (f: FrameConfig) => f.id)
           }
         }
-        .scrollable(ScrollDirection.Horizontal)
+        .columnsTemplate('1fr 1fr')
+        .columnsGap(12)
+        .rowsGap(12)
+        .layoutWeight(1)
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 16, bottom: 118 })
         .scrollBar(BarState.Off)
-        .width('100%')
-
-        // 外观
-        this.SectionTitle('背景色')
-        this.Swatches(BG_COLORS, this.frame.bg, (c: string) => this.frame.bg = c)
-        this.SectionTitle('文字颜色')
-        this.Swatches(TEXT_COLORS, this.frame.textColor, (c: string) => this.frame.textColor = c)
-
-        Row() {
-          Text('边框厚度')
-            .fontSize(14)
-          Slider({
-            value: this.frame.borderRatio * 100,
-            min: 2,
-            max: 14,
-            step: 0.5,
-            style: SliderStyle.OutSet
-          })
-            .layoutWeight(1)
-            .onChange((v: number) => this.frame.borderRatio = v / 100)
-          Text(`${Math.round(this.frame.borderRatio * 100)}%`)
-            .fontSize(12)
-            .fontColor('#999999')
-            .width(36)
-        }
-        .width('100%')
-
-        Row() {
-          Text('文字大小')
-            .fontSize(14)
-          Slider({
-            value: this.frame.fontSize * 1000,
-            min: 20,
-            max: 60,
-            step: 1,
-            style: SliderStyle.OutSet
-          })
-            .layoutWeight(1)
-            .onChange((v: number) => this.frame.fontSize = v / 1000)
-          Text(`${Math.round(this.frame.fontSize * 1000)}`)
-            .fontSize(12)
-            .fontColor('#999999')
-            .width(36)
-        }
-        .width('100%')
-
-        // 布局
-        this.SectionTitle('文字位置与对齐')
-        Row({ space: 12 }) {
-          Button(this.frame.pos === 'top' ? '✓ 上方' : '上方', { type: ButtonType.Capsule })
-            .layoutWeight(1)
-            .fontSize(13)
-            .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.frame.pos === 'top' ? '#0A59F7' : '#EEEEEE')
-            .fontColor(this.frame.pos === 'top' ? Color.White : '#333333')
-            .onClick(() => this.frame.pos = 'top')
-          Button(this.frame.pos === 'bottom' ? '✓ 下方' : '下方', { type: ButtonType.Capsule })
-            .layoutWeight(1)
-            .fontSize(13)
-            .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.frame.pos === 'bottom' ? '#0A59F7' : '#EEEEEE')
-            .fontColor(this.frame.pos === 'bottom' ? Color.White : '#333333')
-            .onClick(() => this.frame.pos = 'bottom')
-        }
-        .width('100%')
-
-        Row({ space: 12 }) {
-          Button(this.frame.align === 'left' ? '✓ 左' : '左', { type: ButtonType.Capsule })
-            .layoutWeight(1)
-            .fontSize(13)
-            .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.frame.align === 'left' ? '#0A59F7' : '#EEEEEE')
-            .fontColor(this.frame.align === 'left' ? Color.White : '#333333')
-            .onClick(() => this.frame.align = 'left')
-          Button(this.frame.align === 'center' ? '✓ 中' : '中', { type: ButtonType.Capsule })
-            .layoutWeight(1)
-            .fontSize(13)
-            .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.frame.align === 'center' ? '#0A59F7' : '#EEEEEE')
-            .fontColor(this.frame.align === 'center' ? Color.White : '#333333')
-            .onClick(() => this.frame.align = 'center')
-          Button(this.frame.align === 'right' ? '✓ 右' : '右', { type: ButtonType.Capsule })
-            .layoutWeight(1)
-            .fontSize(13)
-            .buttonStyle(ButtonStyleMode.NORMAL)
-            .backgroundColor(this.frame.align === 'right' ? '#0A59F7' : '#EEEEEE')
-            .fontColor(this.frame.align === 'right' ? Color.White : '#333333')
-            .onClick(() => this.frame.align = 'right')
-        }
-        .width('100%')
-
-        // 显示要素
-        this.SectionTitle('显示要素（来自照片 EXIF）')
-        this.SwitchRow('光圈', this.frame.showAperture, (v: boolean) => this.frame.showAperture = v)
-        this.SwitchRow('快门', this.frame.showShutter, (v: boolean) => this.frame.showShutter = v)
-        this.SwitchRow('ISO', this.frame.showIso, (v: boolean) => this.frame.showIso = v)
-        this.SwitchRow('焦距', this.frame.showFocal, (v: boolean) => this.frame.showFocal = v)
-        this.SwitchRow('相机型号', this.frame.showCamera, (v: boolean) => this.frame.showCamera = v)
-        this.SwitchRow('拍摄时间', this.frame.showTime, (v: boolean) => this.frame.showTime = v)
-        this.SwitchRow('经纬度', this.frame.showGps, (v: boolean) => this.frame.showGps = v)
-
-        this.SectionTitle('自定义文字')
-        TextInput({ text: this.frame.title, placeholder: '例如：我的旅行日记 / MOMENT' })
-          .width('100%')
-          .onChange((v: string) => this.frame.title = v)
-        this.SwitchRow('显示自定义文字', this.frame.showTitle, (v: boolean) => this.frame.showTitle = v)
-
-        Button('保存为我的相框', { type: ButtonType.Capsule })
-          .width('100%')
-          .backgroundColor('#0A59F7')
-          .onClick(() => this.saveAsPreset())
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }
-      .padding({ left: 16, right: 16, top: 16, bottom: 132 })
     }
     .width('100%')
     .height('100%')
-    .align(Alignment.Top)
+    .backgroundColor($r('app.color.page_background'))
+    .onAreaChange((oldValue: Area, newValue: Area) => {
+      this.pageW = newValue.width as number;
+    })
   }
 
   @Builder
-  Chip(f: FrameConfig, deletable: boolean) {
-    Column({ space: 4 }) {
-      Row() {
-        Text(f.name)
-          .fontSize(11)
-          .fontColor(this.frame.id === f.id ? '#0A59F7' : '#333333')
-          .textAlign(TextAlign.Center)
-          .width('100%')
+  SectionTab(index: number, label: string, count: number) {
+    Column({ space: 8 }) {
+      Row({ space: 6 }) {
+        Text(label)
+          .fontSize(15)
+          .fontWeight(this.section === index ? FontWeight.Bold : FontWeight.Medium)
+          .fontColor(this.section === index ? '#0A59F7' : $r('app.color.text_secondary'))
+        Text(`${count}`)
+          .fontSize(10)
+          .fontColor(this.section === index ? '#0A59F7' : $r('app.color.text_tertiary'))
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .borderRadius(8)
+          .backgroundColor(this.section === index ? $r('app.color.blue_tint_strong') :
+            $r('app.color.surface_tertiary'))
       }
-      .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-      .borderRadius(8)
-      .backgroundColor(f.bg)
-      .border({
-        width: this.frame.id === f.id ? 2 : 1,
-        color: this.frame.id === f.id ? '#0A59F7' : '#CCCCCC'
-      })
+      Column() {
+      }
+      .width('72%')
+      .height(3)
+      .borderRadius(2)
+      .backgroundColor(this.section === index ? '#0A59F7' : '#00FFFFFF')
     }
-    .onClick(() => this.frame.copyFrom(f))
-    .gesture(LongPressGesture()
-      .onAction((event: GestureEvent) => {
-        if (deletable) {
-          this.confirmDelete(f);
+    .layoutWeight(1)
+    .height('100%')
+    .justifyContent(FlexAlign.End)
+    .onClick(() => this.section = index)
+  }
+
+  @Builder
+  FrameCard(f: FrameConfig, editable: boolean) {
+    GridItem() {
+      Column({ space: 10 }) {
+        Row() {
+          Text(f.name)
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.text_primary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+          if (editable) {
+            Stack({ alignContent: Alignment.Center }) {
+              SymbolGlyph($r('sys.symbol.trash'))
+                .fontSize(16)
+                .fontColor(['#D94838'])
+            }
+            .width(30)
+            .height(30)
+            .borderRadius(15)
+            .backgroundColor($r('app.color.red_tint'))
+            .onClick(() => this.confirmDelete(f))
+          } else {
+            Text('内置')
+              .fontSize(10)
+              .fontColor($r('app.color.text_secondary'))
+              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+              .borderRadius(8)
+              .backgroundColor($r('app.color.surface_tertiary'))
+          }
         }
-      })
-    )
+        .width('100%')
+
+        Stack({ alignContent: Alignment.Center }) {
+          FramePreview({
+            frame: f,
+            photo: null,
+            previewWidth: Math.max(110, this.cardW() - 28),
+            radius: 5
+          })
+        }
+        .width('100%')
+        .height(142)
+        .borderRadius(12)
+        .backgroundColor($r('app.color.surface_muted'))
+        .clip(true)
+        .onClick(() => {
+          if (editable) {
+            this.openDesigner(f.id);
+          }
+        })
+
+        if (editable) {
+          Text('点击预览区域继续编辑')
+            .fontSize(10)
+            .fontColor($r('app.color.text_tertiary'))
+        } else {
+          Text('系统模板')
+            .fontSize(10)
+            .fontColor($r('app.color.text_tertiary'))
+        }
+      }
+      .width('100%')
+      .height(220)
+      .padding(12)
+      .borderRadius(18)
+      .backgroundColor($r('app.color.surface'))
+      .border({ width: 1, color: $r('app.color.border_light') })
+      .shadow({ radius: 8, color: '#10000000', offsetX: 0, offsetY: 3 })
+    }
   }
 }

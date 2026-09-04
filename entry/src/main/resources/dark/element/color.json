@@ -3,6 +3,98 @@
     {
       "name": "start_window_background",
       "value": "#000000"
+    },
+    {
+      "name": "page_background",
+      "value": "#101113"
+    },
+    {
+      "name": "gallery_background",
+      "value": "#101113"
+    },
+    {
+      "name": "surface",
+      "value": "#1C1C1E"
+    },
+    {
+      "name": "surface_secondary",
+      "value": "#242426"
+    },
+    {
+      "name": "surface_tertiary",
+      "value": "#303034"
+    },
+    {
+      "name": "surface_muted",
+      "value": "#29292C"
+    },
+    {
+      "name": "preview_background",
+      "value": "#28292C"
+    },
+    {
+      "name": "text_primary",
+      "value": "#F5F5F7"
+    },
+    {
+      "name": "text_strong",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#B0B0B5"
+    },
+    {
+      "name": "text_tertiary",
+      "value": "#85858B"
+    },
+    {
+      "name": "text_disabled",
+      "value": "#66666B"
+    },
+    {
+      "name": "border",
+      "value": "#3A3A3E"
+    },
+    {
+      "name": "border_light",
+      "value": "#343438"
+    },
+    {
+      "name": "neutral_control",
+      "value": "#2C2C30"
+    },
+    {
+      "name": "blue_tint",
+      "value": "#172748"
+    },
+    {
+      "name": "blue_tint_strong",
+      "value": "#1C2D52"
+    },
+    {
+      "name": "red_tint",
+      "value": "#3A2220"
+    },
+    {
+      "name": "nav_glass",
+      "value": "#E61C1C1E"
+    },
+    {
+      "name": "header_glass",
+      "value": "#B318181A"
+    },
+    {
+      "name": "button_glass",
+      "value": "#6636363A"
+    },
+    {
+      "name": "dialog_glass",
+      "value": "#F01C1C1E"
+    },
+    {
+      "name": "dialog_mask",
+      "value": "#80000000"
     }
   ]
 }

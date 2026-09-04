@@ -6,6 +6,8 @@ import { FrameConfig } from '../model/FrameConfig';
 import { Album, PhotoRec, loadAlbums, createAlbum, addPhotosToAlbum, removePhoto, removeAlbum } from '../model/AlbumStore';
 import { AlbumDetailParam } from './AlbumDetailPage';
 
+const MAX_PILE_PHOTOS = 5;
+
 /**
  * 图库页：右上角 + 新建相册（沉浸光感弹窗）→ 选择导入图片 → 相册卡片堆叠展示。
  * 点击堆叠中的照片或编辑按钮进入相册详情页，长按照片移除。
@@ -18,6 +20,7 @@ export struct GalleryTab {
   @State pageW: number = 360;
   @State showCreate: boolean = false;
   @State albumName: string = '';
+  @State renderVersion: number = 0;
   @StorageLink('statusBarH') statusH: number = 0;
   @StorageLink('albumVersion') @Watch('onAlbumsChanged') albumVersion: number = 0;
 
@@ -31,6 +34,8 @@ export struct GalleryTab {
 
   private reload(): void {
     this.albums = loadAlbums(getContext(this) as common.Context);
+    // 同一相册 id 的空态/有照片态需要强制重建，避免 ForEach 复用旧分支。
+    this.renderVersion += 1;
   }
 
   private pilePhotoWidth(): number {
@@ -69,6 +74,7 @@ export struct GalleryTab {
     }
     const ctx = getContext(this) as common.Context;
     const album = createAlbum(ctx, name);
+    this.reload();
     this.showCreate = false;
     this.albumName = '';
     this.importPhotos(album.id);
@@ -82,7 +88,10 @@ export struct GalleryTab {
       const picker = new photoAccessHelper.PhotoViewPicker();
       const result = await picker.select(opt);
       if (result.photoUris.length > 0) {
-        addPhotosToAlbum(getContext(this) as common.Context, albumId, result.photoUris);
+        const ctx = getContext(this) as common.Context;
+        addPhotosToAlbum(ctx, albumId, result.photoUris);
+        // 图片选择器返回后直接刷新当前页面，避免必须切换 Tab 才看到预览。
+        this.reload();
       }
     } catch (err) {
       const e = err as BusinessError;
@@ -176,8 +185,9 @@ export struct GalleryTab {
   @Builder
   PhotoPile(album: Album) {
     Stack({ alignContent: Alignment.Center }) {
-      ForEach(album.photos, (rec: PhotoRec, index: number) => {
-        this.PilePhoto(album, rec, index, album.photos.length)
+      ForEach(album.photos.slice(Math.max(0, album.photos.length - MAX_PILE_PHOTOS)),
+        (rec: PhotoRec, index: number) => {
+        this.PilePhoto(album, rec, index, Math.min(album.photos.length, MAX_PILE_PHOTOS))
       }, (rec: PhotoRec) => rec.uri)
     }
     .width('100%')
@@ -194,7 +204,7 @@ export struct GalleryTab {
         .width(156)
         .height(104)
         .borderRadius(14)
-        .backgroundColor('#F1F1F1')
+        .backgroundColor($r('app.color.surface_tertiary'))
         .rotate({ angle: -4 })
 
         Column() {
@@ -205,13 +215,13 @@ export struct GalleryTab {
         .width(156)
         .height(104)
         .borderRadius(14)
-        .backgroundColor('#F7F7F7')
-        .border({ width: 2, color: '#D7D7D7', style: BorderStyle.Dashed })
+        .backgroundColor($r('app.color.surface_secondary'))
+        .border({ width: 2, color: $r('app.color.border'), style: BorderStyle.Dashed })
         .justifyContent(FlexAlign.Center)
       }
       Text('点击添加照片 · 长按删除相册')
         .fontSize(12)
-        .fontColor('#AAAAAA')
+        .fontColor($r('app.color.text_tertiary'))
     }
     .width('100%')
     .height(164)
@@ -226,24 +236,25 @@ export struct GalleryTab {
         Text(album.name)
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#222222')
+          .fontColor($r('app.color.text_primary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(`${album.photos.length} 张照片`)
           .fontSize(12)
-          .fontColor('#888888')
+          .fontColor($r('app.color.text_secondary'))
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
       Row({ space: 8 }) {
-        this.AlbumAction($r('sys.symbol.plus'), '#555555', '#F0F0F0', (): void => {
+        this.AlbumAction($r('sys.symbol.plus'), $r('app.color.text_secondary'),
+          $r('app.color.neutral_control'), (): void => {
           this.importPhotos(album.id);
         })
-        this.AlbumAction($r('sys.symbol.square_and_pencil'), '#0A59F7', '#EAF1FF', (): void => {
+        this.AlbumAction($r('sys.symbol.square_and_pencil'), '#0A59F7', $r('app.color.blue_tint'), (): void => {
           this.openAlbum(album);
         })
-        this.AlbumAction($r('sys.symbol.trash'), '#D94838', '#FFF0EE', (): void => {
+        this.AlbumAction($r('sys.symbol.trash'), '#D94838', $r('app.color.red_tint'), (): void => {
           this.confirmRemoveAlbum(album);
         })
       }
@@ -252,7 +263,7 @@ export struct GalleryTab {
   }
 
   @Builder
-  AlbumAction(icon: Resource, color: string, bg: string, action: () => void) {
+  AlbumAction(icon: Resource, color: ResourceColor, bg: ResourceColor, action: () => void) {
     Stack({ alignContent: Alignment.Center }) {
       SymbolGlyph(icon)
         .fontSize(17)
@@ -279,8 +290,8 @@ export struct GalleryTab {
     .width('100%')
     .padding(16)
     .borderRadius(22)
-    .backgroundColor(Color.White)
-    .border({ width: 2, color: '#D8D8D8' })
+    .backgroundColor($r('app.color.surface'))
+    .border({ width: 2, color: $r('app.color.border') })
     .shadow({ radius: 12, color: '#16000000', offsetX: 0, offsetY: 5 })
     .gesture(
       LongPressGesture()
@@ -299,7 +310,7 @@ export struct GalleryTab {
         Text('新建相册')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#222222')
+          .fontColor($r('app.color.text_primary'))
         TextInput({ text: this.albumName, placeholder: '输入相册名称' })
           .width('100%')
           .height(44)
@@ -308,8 +319,8 @@ export struct GalleryTab {
         Row({ space: 14 }) {
           Button('取消', { type: ButtonType.Capsule })
             .layoutWeight(1)
-            .backgroundColor('#E8E8E8')
-            .fontColor('#333333')
+            .backgroundColor($r('app.color.surface_tertiary'))
+            .fontColor($r('app.color.text_primary'))
             .onClick(() => {
               this.showCreate = false;
               this.albumName = '';
@@ -324,14 +335,14 @@ export struct GalleryTab {
       .width('80%')
       .padding({ left: 22, right: 22, top: 22, bottom: 20 })
       .borderRadius(22)
-      .backgroundColor('#F0FFFFFF')
+      .backgroundColor($r('app.color.dialog_glass'))
       .backdropBlur(32)   // 沉浸光感：磨砂玻璃弹窗
       .shadow({ radius: 24, color: '#33000000', offsetX: 0, offsetY: 8 })
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('#40000000')
+    .backgroundColor($r('app.color.dialog_mask'))
   }
 
   build() {
@@ -342,19 +353,19 @@ export struct GalleryTab {
           Text('相册')
             .fontSize(30)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#111111')
+            .fontColor($r('app.color.text_strong'))
           Blank()
           Column() {
             SymbolGlyph($r('sys.symbol.plus'))
               .fontSize(22)
-              .fontColor(['#333333'])
+              .fontColor([$r('app.color.text_primary')])
           }
           .width(46)
           .height(46)
           .borderRadius(23)
-          .backgroundColor('#80FFFFFF')
+          .backgroundColor($r('app.color.button_glass'))
           .backdropBlur(20)
-          .border({ width: 1, color: '#CCFFFFFF' })
+          .border({ width: 1, color: $r('app.color.border_light') })
           .justifyContent(FlexAlign.Center)
           .shadow({ radius: 10, color: '#10000000', offsetX: 0, offsetY: 3 })
           .onClick(() => {
@@ -363,7 +374,7 @@ export struct GalleryTab {
         }
         .width('100%')
         .padding({ left: 18, right: 18, top: px2vp(this.statusH) + 12, bottom: 14 })
-        .backgroundColor('#66FFFFFF')
+        .backgroundColor($r('app.color.header_glass'))
         .backdropBlur(32)
 
         if (this.albums.length > 0) {
@@ -371,7 +382,7 @@ export struct GalleryTab {
             Column({ space: 18 }) {
               ForEach(this.albums, (album: Album) => {
                 this.AlbumSection(album)
-              }, (album: Album) => album.id)
+              }, (album: Album) => `${album.id}_${album.photos.length}_${this.renderVersion}`)
             }
             .width('100%')
             .padding({ left: 18, right: 18, top: 18, bottom: 120 })
@@ -391,17 +402,17 @@ export struct GalleryTab {
             .width(64)
             .height(64)
             .borderRadius(32)
-            .border({ width: 1, color: '#CCCCCC', style: BorderStyle.Dashed })
+            .border({ width: 1, color: $r('app.color.border'), style: BorderStyle.Dashed })
             .justifyContent(FlexAlign.Center)
             .onClick(() => {
               this.showCreate = true;
             })
             Text('还没有相册')
               .fontSize(15)
-              .fontColor('#666666')
+              .fontColor($r('app.color.text_secondary'))
             Text('点右上角 + 新建相册，导入照片开始')
               .fontSize(12)
-              .fontColor('#AAAAAA')
+              .fontColor($r('app.color.text_tertiary'))
           }
           .layoutWeight(1)
           .width('100%')
@@ -421,6 +432,6 @@ export struct GalleryTab {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F2F5F7')
+    .backgroundColor($r('app.color.gallery_background'))
   }
 }

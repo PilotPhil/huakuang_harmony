@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FrameConfig, buildPresets } from '../model/FrameConfig';
-import { markProcessed } from '../model/AlbumStore';
+import { markProcessed, setPhotoFrame } from '../model/AlbumStore';
 import { PhotoItem, makePhotoItem } from '../model/ExifHelper';
 import { exportPhoto } from '../service/FrameExporter';
 import { FramePreview } from './FramePreview';
@@ -13,11 +13,13 @@ export class EditParam {
   uri: string = '';
   albumId: string = '';
   customFrames: FrameConfig[] = [];
+  frameId: string = '';
 
-  constructor(uri: string, albumId: string, customFrames: FrameConfig[]) {
+  constructor(uri: string, albumId: string, customFrames: FrameConfig[], frameId: string = '') {
     this.uri = uri;
     this.albumId = albumId;
     this.customFrames = customFrames;
+    this.frameId = frameId;
   }
 }
 
@@ -28,8 +30,10 @@ export class EditParam {
 @Component
 export struct PhotoEditPage {
   @State selectedId: string = '';
+  @State selectedFrameRef: FrameConfig = new FrameConfig();
   @State allFrames: FrameConfig[] = [];
   @State busy: boolean = false;
+  @State stagedId: string = '';
   @State previewW: number = 360;
   @State photo: PhotoItem = new PhotoItem();
   @StorageLink('statusBarH') statusH: number = 0;
@@ -39,6 +43,13 @@ export struct PhotoEditPage {
 
   aboutToAppear(): void {
     this.allFrames = buildPresets().concat(this.param.customFrames);
+    for (const frame of this.allFrames) {
+      if (frame.id === this.param.frameId) {
+        this.selectFrame(frame);
+        this.stagedId = frame.id;
+        break;
+      }
+    }
     setStatusBarStyle(getContext(this) as common.Context, true); // 深色页面：状态栏白色图标
     makePhotoItem(this.param.uri).then((item: PhotoItem) => {
       this.photo = item;
@@ -50,12 +61,12 @@ export struct PhotoEditPage {
   }
 
   private selectedFrame(): FrameConfig | null {
-    for (const f of this.allFrames) {
-      if (f.id === this.selectedId) {
-        return f;
-      }
-    }
-    return null;
+    return this.selectedId === '' ? null : this.selectedFrameRef;
+  }
+
+  private selectFrame(frame: FrameConfig): void {
+    this.selectedFrameRef = frame;
+    this.selectedId = frame.id;
   }
 
   private selectedName(): string {
@@ -67,21 +78,41 @@ export struct PhotoEditPage {
     return this.photo.height > this.photo.width ? 54 : 78;
   }
 
-  async save() {
+  private isStaged(): boolean {
+    return this.selectedId !== '' && this.selectedId === this.stagedId;
+  }
+
+  private stage(): void {
+    const frame = this.selectedFrame();
+    if (frame === null) {
+      promptAction.showToast({ message: '请先选择一个相框' });
+      return;
+    }
+    setPhotoFrame(getContext(this) as common.Context, this.param.albumId, this.photo.uri, frame.id);
+    this.stagedId = frame.id;
+    promptAction.showToast({ message: `已暂存「${frame.name}」` });
+  }
+
+  async exportCurrent() {
     if (this.busy) {
+      return;
+    }
+    const frame = this.selectedFrame();
+    if (frame === null) {
+      promptAction.showToast({ message: '请先选择一个相框' });
       return;
     }
     this.busy = true;
     try {
       const ctx = getContext(this) as common.Context;
-      const n = await exportPhoto(ctx, this.photo.uri, this.selectedFrame());
+      const n = await exportPhoto(ctx, this.photo.uri, frame);
       if (n > 0) {
         markProcessed(ctx, this.param.albumId, this.photo.uri);
       }
-      promptAction.showToast({ message: n > 0 ? '已保存到相册' : '已取消保存' });
+      promptAction.showToast({ message: n > 0 ? '已导出到相册' : '已取消导出' });
     } catch (err) {
       const e = err as BusinessError;
-      promptAction.showToast({ message: `保存失败：${e.message}` });
+      promptAction.showToast({ message: `导出失败：${e.message}` });
     } finally {
       this.busy = false;
     }
@@ -121,16 +152,27 @@ export struct PhotoEditPage {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
         .margin({ left: 12, right: 12 })
-        Button(this.busy ? '保存中…' : '保存', { type: ButtonType.Capsule })
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(Color.White)
-          .backgroundColor('#3478F6')
-          .height(40)
-          .padding({ left: 19, right: 19 })
-          .shadow({ radius: 12, color: '#403478F6', offsetX: 0, offsetY: 4 })
-          .enabled(!this.busy)
-          .onClick(() => this.save())
+        Row({ space: 8 }) {
+          Button(this.isStaged() ? '已暂存' : '暂存', { type: ButtonType.Capsule })
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.isStaged() ? '#AFC8FF' : Color.White)
+            .backgroundColor(this.isStaged() ? '#263A64' : '#22FFFFFF')
+            .height(38)
+            .padding({ left: 14, right: 14 })
+            .enabled(!this.busy)
+            .onClick(() => this.stage())
+          Button(this.busy ? '导出中…' : '导出', { type: ButtonType.Capsule })
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .backgroundColor('#3478F6')
+            .height(38)
+            .padding({ left: 14, right: 14 })
+            .shadow({ radius: 12, color: '#403478F6', offsetX: 0, offsetY: 4 })
+            .enabled(!this.busy)
+            .onClick(() => this.exportCurrent())
+        }
       }
       .width('100%')
       .padding({ left: 16, right: 16, top: px2vp(this.statusH) + 8, bottom: 10 })
@@ -209,27 +251,23 @@ export struct PhotoEditPage {
 
   @Builder
   SelectedFramePreview() {
-    ForEach(this.allFrames, (f: FrameConfig) => {
-      if (f.id === this.selectedId) {
-        Scroll() {
-          Row() {
-            FramePreview({
-              frame: f,
-              photo: this.photo,
-              previewWidth: this.previewW,
-              radius: 5
-            })
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding({ top: 24, bottom: 24 })
-        }
-        .scrollable(ScrollDirection.Vertical)
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: false })
-        .align(Alignment.Center)
+    Scroll() {
+      Row() {
+        FramePreview({
+          frame: this.selectedFrameRef,
+          photo: this.photo,
+          previewWidth: this.previewW,
+          radius: 5
+        })
       }
-    }, (f: FrameConfig) => f.id)
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .padding({ top: 24, bottom: 24 })
+    }
+    .scrollable(ScrollDirection.Vertical)
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: false })
+    .align(Alignment.Center)
   }
 
   @Builder
@@ -308,7 +346,7 @@ export struct PhotoEditPage {
     })
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
-      this.selectedId = f.id;
+      this.selectFrame(f);
     })
   }
 }
